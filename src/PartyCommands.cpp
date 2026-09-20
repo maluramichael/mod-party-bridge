@@ -25,6 +25,7 @@
 #include "PlayerbotMgr.h"
 #include "QuestDef.h"
 #include "StringFormat.h"
+#include "WorldPacket.h"
 
 #include <cctype>
 #include <map>
@@ -184,7 +185,40 @@ namespace
         return nullptr;
     }
 
-    void Deliver(Player* master, Player* bot, std::string const& id, std::string const& op, std::string const& text)
+    // Hand the master's quest to one bot exactly like "share quest" in the client does (the same checks as
+    // WorldSession::HandlePushQuestToParty, but for a single receiver). Playerbots' "accept [quest]" whisper only
+    // works while the quest giver stands next to the bot and otherwise fails silently; a shared quest works
+    // anywhere in the group. The bot then takes it via its own "quest share" trigger (AcceptQuestShareAction).
+    // Returns an error text, or nullopt if the quest was handed over.
+    std::optional<std::string> ShareQuestWithBot(Player* master, Player* bot, PlayerbotAI* ai, uint32 questId)
+    {
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            return "unbekannte Quest";
+        if (!bot->IsInMap(master))
+            return "Bot ist nicht in derselben Karte wie du";
+        if (!bot->SatisfyQuestStatus(quest, false))
+            return "Bot hat die Quest schon oder darf sie nicht erneut annehmen";
+        if (bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE)
+            return "Bot hat die Quest schon abgeschlossen";
+        if (!bot->CanTakeQuest(quest, false))
+            return "Bot kann die Quest nicht annehmen (Klasse/Volk/Level/Vorquest/Ruf)";
+        if (!bot->SatisfyQuestLog(false))
+            return "Questlog des Bots ist voll";
+        if (bot->GetDivider())
+            return "Bot ist gerade mit einer anderen geteilten Quest beschaeftigt";
+
+        master->SendPushToPartyResponse(bot, QUEST_PARTY_MSG_SHARING_QUEST);
+        bot->SetDivider(master->GetGUID());
+
+        WorldPacket packet(CMSG_PUSHQUESTTOPARTY, 4);
+        packet << questId;
+        ai->HandleMasterIncomingPacket(packet);
+        return std::nullopt;
+    }
+
+    void Deliver(Player* master, Player* bot, std::string const& id, std::string const& op, std::string const& text,
+                 uint32 acceptQuestId = 0)
     {
         PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(bot);
         if (!ai)
@@ -192,9 +226,16 @@ namespace
             Reply(id, bot->GetName(), op, false, "kein Playerbot");
             return;
         }
+        if (acceptQuestId && master->GetQuestStatus(acceptQuestId) != QUEST_STATUS_NONE &&
+            master->CanShareQuest(acceptQuestId))
+        {
+            std::optional<std::string> err = ShareQuestWithBot(master, bot, ai, acceptQuestId);
+            Reply(id, bot->GetName(), op, !err, err ? *err : "Quest geteilt - der Bot nimmt sie gleich an");
+            return;
+        }
         LOG_DEBUG("module", "[mod-party-bridge] {} <- '{}'", bot->GetName(), text);
         ai->HandleCommand(CHAT_MSG_WHISPER, text, master);
-        Reply(id, bot->GetName(), op, true, "gesendet: " + text);
+        Reply(id, bot->GetName(), op, true, acceptQuestId ? "gesendet (klappt nur, wenn der Questgeber beim Bot steht): " + text : "gesendet: " + text);
     }
 }
 
@@ -226,6 +267,8 @@ namespace PartyBridge
                 return;
             }
 
+            uint32 const acceptQuestId = op == "quest.accept" ? args.value("questId", 0u) : 0u;
+
             if (botName == "*")
             {
                 Player* master = FirstMasterWithBots();
@@ -235,7 +278,7 @@ namespace PartyBridge
                     return;
                 }
                 for (Player* bot : CollectBots(master))
-                    Deliver(master, bot, id, op, text);
+                    Deliver(master, bot, id, op, text, acceptQuestId);
                 return;
             }
 
@@ -251,7 +294,7 @@ namespace PartyBridge
                 Reply(id, botName, op, false, "Bot ist nicht in der Gruppe eines erlaubten Masters");
                 return;
             }
-            Deliver(master, bot, id, op, text);
+            Deliver(master, bot, id, op, text, acceptQuestId);
         }
         catch (std::exception const& e)
         {

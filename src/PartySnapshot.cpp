@@ -396,6 +396,9 @@ namespace
 
         // Bags: backpack is bag 0, equipped bags are 1..4.
         json bags = json::array();
+        json bagSlots = json::array();
+        bagSlots.push_back({ { "bag", 0 }, { "entry", 0 }, { "name", "Rucksack" }, { "quality", 1 },
+                             { "icon", "inv_misc_bag_08" }, { "size", 16 } });
         uint32 totalSlots = 16;
         for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
             if (Item* item = p->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
@@ -407,11 +410,18 @@ namespace
             if (!bag)
                 continue;
             totalSlots += bag->GetBagSize();
+            {
+                json info = ItemJson(bag, 0, 0);
+                bagSlots.push_back({ { "bag", b + 1 }, { "entry", info["entry"] }, { "name", info["name"] },
+                                     { "quality", info["quality"] }, { "icon", info["icon"] },
+                                     { "size", bag->GetBagSize() } });
+            }
             for (uint32 s = 0; s < bag->GetBagSize(); ++s)
                 if (Item* item = bag->GetItemByPos(static_cast<uint8>(s)))
                     bags.push_back(ItemJson(item, b + 1, static_cast<uint8>(s)));
         }
         m["bags"] = bags;
+        m["bagSlots"] = bagSlots;
         m["freeSlots"] = p->GetFreeInventorySpace();
         m["totalSlots"] = totalSlots;
 
