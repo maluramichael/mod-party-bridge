@@ -1,0 +1,58 @@
+[worldserver]
+
+###################################################################################################
+# mod-party-bridge
+#
+# Live party dashboard bridge for Playerbots. Publishes a JSON snapshot of the bots in each real
+# player's group to Redis (channel wowparty:snap, ~1 Hz) and executes whitelisted commands that a
+# web dashboard queues on the Redis list wowparty:cmd. Commands are injected as a whisper from the
+# master to the bot, so Playerbots' own validation/security stays in charge.
+#
+# Redis I/O runs on background threads; the world thread never touches a socket. If Redis is down
+# the module just drops data (no crash, no lag). Protocol: see the wow-party project's PROTOCOL.md.
+###################################################################################################
+
+#
+#    PartyBridge.Enable
+#        Description: Master switch.
+#        Default:     0 (disabled)
+#
+PartyBridge.Enable = 0
+
+#
+#    PartyBridge.RedisHost
+#        Description: Redis server host/IP.
+#        Default:     "127.0.0.1"
+#
+PartyBridge.RedisHost = "127.0.0.1"
+
+#
+#    PartyBridge.RedisPort
+#        Description: Redis server port.
+#        Default:     6379
+#
+PartyBridge.RedisPort = 6379
+
+#
+#    PartyBridge.SnapshotIntervalMs
+#        Description: How often a snapshot per master is built and published.
+#                     Building walks all bags/quests/stats of every bot in the group, so keep this
+#                     >= 500 for large parties.
+#        Default:     1000 (minimum enforced: 250)
+#
+PartyBridge.SnapshotIntervalMs = 1000
+
+#
+#    PartyBridge.MaxCommandsPerTick
+#        Description: Upper bound of dashboard commands executed per world update tick.
+#        Default:     8
+#
+PartyBridge.MaxCommandsPerTick = 8
+
+#
+#    PartyBridge.MasterAccountIds
+#        Description: Comma-separated account IDs allowed to be a dashboard master. Empty = every
+#                     real (non-bot) player who has bots in the group.
+#        Default:     ""
+#
+PartyBridge.MasterAccountIds = ""
