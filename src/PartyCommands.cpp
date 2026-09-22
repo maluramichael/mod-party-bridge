@@ -157,20 +157,6 @@ namespace
         return "unbekannte Aktion '" + op + "'";
     }
 
-    // The master a bot obeys: a real player in the same group, allowed by config.
-    Player* MasterOf(Player* bot)
-    {
-        PlayerbotAI* ai = PartyBridge::IsBot(bot) ? PlayerbotsMgr::instance().GetPlayerbotAI(bot) : nullptr;
-        Player* master = ai ? ai->GetMaster() : nullptr;
-        if (!master || !master->IsInWorld() || PartyBridge::IsBot(master))
-            return nullptr;
-        if (!master->GetGroup() || master->GetGroup() != bot->GetGroup())
-            return nullptr;
-        if (!PartyBridge::Bridge::instance().IsMasterAllowed(master->GetSession()->GetAccountId()))
-            return nullptr;
-        return master;
-    }
-
     // For bot "*": the first allowed real player that has bots in the group.
     Player* FirstMasterWithBots()
     {
@@ -288,7 +274,7 @@ namespace PartyBridge
                 Reply(id, botName, op, false, "Bot nicht online");
                 return;
             }
-            Player* master = MasterOf(bot);
+            Player* master = PartyBridge::MasterOf(bot);
             if (!master)
             {
                 Reply(id, botName, op, false, "Bot ist nicht in der Gruppe eines erlaubten Masters");

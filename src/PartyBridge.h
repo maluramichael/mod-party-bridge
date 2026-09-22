@@ -111,6 +111,10 @@ namespace PartyBridge
 
     bool IsBot(Player* player);
 
+    // The master a bot obeys: a real player in the same group, allowed by config (PartyBridge.MasterAccountIds).
+    // nullptr if `bot` is not a bot, has no reachable master, or that master isn't configured/grouped.
+    Player* MasterOf(Player* bot);
+
     // ---- PartyCommands.cpp (world thread) ----
 
     // Parses and executes one raw command JSON. Always publishes exactly one CommandResult per

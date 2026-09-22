@@ -523,6 +523,19 @@ namespace PartyBridge
         return bots;
     }
 
+    Player* MasterOf(Player* bot)
+    {
+        PlayerbotAI* ai = IsBot(bot) ? PlayerbotsMgr::instance().GetPlayerbotAI(bot) : nullptr;
+        Player* master = ai ? ai->GetMaster() : nullptr;
+        if (!master || !master->IsInWorld() || IsBot(master))
+            return nullptr;
+        if (!master->GetGroup() || master->GetGroup() != bot->GetGroup())
+            return nullptr;
+        if (!Bridge::instance().IsMasterAllowed(master->GetSession()->GetAccountId()))
+            return nullptr;
+        return master;
+    }
+
     std::string BuildSnapshot(Player* master)
     {
         std::vector<Player*> const bots = CollectBots(master);

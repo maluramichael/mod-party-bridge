@@ -3,8 +3,10 @@
 // that in turn registers this module's scripts.
 
 void AddPartyBridgeScripts();
+void AddPartyEventScripts();
 
 void Addmod_party_bridgeScripts()
 {
     AddPartyBridgeScripts();
+    AddPartyEventScripts();
 }
