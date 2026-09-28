@@ -1,5 +1,10 @@
 # mod-party-bridge
 
+<!-- links:start -->
+[![Support me on Ko-fi](https://malura.de/assets/badge/kofi.svg)](https://malura.de/go/kofi?ref=mod-party-bridge)
+[![Check out my page](https://malura.de/assets/badge/malura.svg)](https://malura.de/go/site?ref=mod-party-bridge)
+<!-- links:end -->
+
 An [AzerothCore](https://www.azerothcore.org/) module for the
 [Playerbots](https://github.com/liyunfan1223/mod-playerbots) fork (WotLK 3.3.5a): a live
 **party dashboard bridge** over Redis.
